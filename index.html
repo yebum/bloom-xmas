@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05060a">
+<title>Bloom · Christmas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500&display=swap">
+<style>
+:root{--ground:#111110;--ink:#f1ede4;--soft:#a9a499;--mute:#6f6b63;--line:#2a2926}
+*{box-sizing:border-box;margin:0;padding:0;border-radius:0}
+html,body{height:100%;background:var(--ground);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Pretendard","Malgun Gothic","Noto Sans KR",sans-serif;word-break:keep-all}
+body{display:flex;flex-direction:column;justify-content:center;gap:20px;padding:32px 24px}
+.kicker{font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--soft)}
+h1{font-family:"Noto Serif KR",serif;font-weight:500;font-size:28px;line-height:1.42;letter-spacing:-.025em}
+p{font-size:14px;color:var(--soft);line-height:1.7}
+.bar{height:1px;background:var(--line);position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0 auto 0 0;width:30%;background:var(--ink);animation:s 1.4s linear infinite}
+@keyframes s{from{left:-30%}to{left:100%}}
+a.btn{display:block;text-align:center;padding:14px;background:var(--ink);color:var(--ground);font-weight:600;text-decoration:none}
+.hide{display:none}
+</style>
+</head>
+<body>
+<span class="kicker">Bloom — Christmas</span>
+<h1 id="h">트리로 가는 중이에요<br>잠시만요</h1>
+<p id="p">공연장의 크리스마스 트리에 연결하고 있어요.</p>
+<div class="bar" id="bar"><i></i></div>
+<a class="btn hide" id="go" href="#">다시 연결하기</a>
+<script>
+// Fixed entrance: the Bloom server publishes its current address (a new Cloudflare tunnel each start) to current.json.
+// We check that the server really answers before sending the visitor there.
+(function () {
+  const $ = id => document.getElementById(id);
+  let tries = 0;
+  function wait(msg, sub) { $('h').innerHTML = msg; $('p').textContent = sub; $('bar').classList.add('hide'); $('go').classList.remove('hide'); }
+  async function go() {
+    tries++;
+    $('bar').classList.remove('hide'); $('go').classList.add('hide');
+    try {
+      const cur = await (await fetch('current.json?t=' + Date.now(), { cache: 'no-store' })).json();
+      if (!cur.live || !cur.url) return later('지금은 참여 시간이 아니에요', '공연이 시작되면 이 화면이 자동으로 연결돼요.');
+      const c = new AbortController(), to = setTimeout(() => c.abort(), 6000);
+      const ok = await fetch(cur.url + '/api/tree/alive', { cache: 'no-store', signal: c.signal }).then(r => r.ok).catch(() => false);
+      clearTimeout(to);
+      if (ok) { location.replace(cur.url + '/n'); return; }
+      later('연결을 준비하고 있어요', '트리가 곧 깨어나요. 이 화면은 자동으로 다시 시도해요.');
+    } catch (e) {
+      later('연결이 불안정해요', '인터넷 연결을 확인해 주세요. 자동으로 다시 시도해요.');
+    }
+  }
+  function later(h, p) { wait(h, p); setTimeout(go, Math.min(15000, 3000 + tries * 2000)); }
+  $('go').onclick = e => { e.preventDefault(); go(); };
+  go();
+})();
+</script>
+</body>
+</html>
